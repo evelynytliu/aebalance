@@ -1,0 +1,888 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#264653">
+<title>琳婷帳本</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧾</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f4f1ea; --card:#ffffff; --ink:#28241e; --muted:#93897a; --line:#eae5da;
+  --lin:#d96c47; --lin-soft:#fbeae3; --ting:#2a9d8f; --ting-soft:#e2f2f0;
+  --accent:#2a9d8f; --accent-ink:#1d6e64; --danger:#c0392b; --warn:#b7791f; --warn-soft:#fdf3e0;
+  --hero1:#264653; --hero2:#2a9d8f;
+  --r:18px; --shadow:0 1px 2px rgba(40,36,30,.05),0 4px 16px rgba(40,36,30,.06);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#161411; --card:#211e19; --ink:#f0ece3; --muted:#9a9184; --line:#33302a;
+    --lin-soft:#3c261d; --ting-soft:#1c332f; --warn-soft:#3a2e17;
+    --hero1:#1d3540; --hero2:#22806f;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.25);
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:'Noto Sans TC',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  font-size:15px; line-height:1.5; padding-bottom:60px;
+}
+.wrap{max-width:520px;margin:0 auto;padding:14px 14px 0}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit;font-size:inherit}
+input,select,textarea{
+  font-family:inherit;font-size:16px;color:var(--ink);background:var(--bg);
+  border:1.5px solid var(--line);border-radius:12px;padding:9px 12px;outline:none;width:100%;
+}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+.num{font-variant-numeric:tabular-nums}
+/* ---------- header ---------- */
+header{display:flex;align-items:center;gap:8px;padding:4px 2px 12px}
+header h1{font-size:20px;font-weight:900;letter-spacing:1px;flex:1}
+header h1 span{color:var(--accent)}
+.iconbtn{font-size:20px;padding:8px;border-radius:12px;line-height:1}
+.iconbtn:active{background:var(--line)}
+/* ---------- hero ---------- */
+.hero{
+  background:linear-gradient(135deg,var(--hero1),var(--hero2));
+  color:#fff;border-radius:22px;padding:20px 22px;box-shadow:var(--shadow);
+  display:flex;flex-direction:column;gap:4px;
+}
+.hero .lbl{font-size:13px;opacity:.75;letter-spacing:2px}
+.hero .who{font-size:17px;font-weight:700;display:flex;align-items:center;gap:8px}
+.hero .who .arrow{opacity:.7}
+.hero .amt{font-size:42px;font-weight:900;letter-spacing:-1px;line-height:1.15}
+.hero .sub{font-size:12.5px;opacity:.7}
+.hero .actions{margin-top:12px;display:flex;gap:10px}
+.hero .settlebtn{
+  background:#fff;color:var(--hero1);font-weight:700;padding:9px 22px;border-radius:999px;
+  box-shadow:0 2px 8px rgba(0,0,0,.18);font-size:15px;
+}
+.hero .settlebtn:active{transform:scale(.97)}
+.hero.zero .amt{font-size:30px;padding:8px 0}
+/* ---------- cards ---------- */
+.card{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:16px;margin-top:14px}
+.card h2{font-size:13px;color:var(--muted);font-weight:700;letter-spacing:2px;margin-bottom:10px}
+/* ---------- segmented ---------- */
+.seg{display:inline-flex;background:var(--bg);border-radius:12px;padding:3px;gap:2px}
+.seg button{padding:7px 14px;border-radius:9px;font-weight:700;color:var(--muted);font-size:14px;white-space:nowrap}
+.seg button.on{background:var(--card);box-shadow:0 1px 4px rgba(0,0,0,.12)}
+.seg button.on[data-v="lin"]{color:var(--lin)}
+.seg button.on[data-v="ting"]{color:var(--ting)}
+.seg button.on[data-v="half"],.seg button.on[data-v="advance"]{color:var(--accent-ink)}
+/* ---------- quick add ---------- */
+#qform .rows{display:flex;flex-direction:column;gap:10px}
+#qform .r1{display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between}
+#qform .r2{display:flex;gap:8px}
+#qamount{width:36%;font-size:22px;font-weight:700;text-align:center}
+#qtitle{flex:1}
+#qform .r3{display:flex;gap:8px}
+#qdate{width:44%;color:var(--muted)}
+.primary{
+  flex:1;background:var(--accent);color:#fff;font-weight:700;border-radius:12px;
+  padding:10px;font-size:16px;letter-spacing:2px;
+}
+.primary:active{transform:scale(.98)}
+.primary:disabled{opacity:.6}
+.hint{font-size:12px;color:var(--muted);margin-top:9px;text-align:center}
+/* ---------- pending ---------- */
+.pcard{background:var(--warn-soft);border-radius:14px;padding:12px;margin-bottom:10px}
+.pcard .top{display:flex;align-items:baseline;gap:8px}
+.pcard .top .t{font-weight:700;flex:1}
+.pcard .top .a{font-weight:900;font-size:17px}
+.pcard .meta{font-size:12px;color:var(--warn);margin:1px 0 8px}
+.pcard .ops{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.pcard .ok{background:var(--accent);color:#fff;border-radius:10px;padding:7px 16px;font-weight:700}
+.pcard .no{color:var(--danger);padding:7px 8px;font-size:17px}
+/* ---------- tabs & search ---------- */
+.bar{display:flex;gap:8px;margin-top:16px;align-items:center}
+.tabs{display:flex;background:var(--card);border-radius:12px;padding:3px;box-shadow:var(--shadow)}
+.tabs button{padding:7px 16px;border-radius:9px;font-weight:700;color:var(--muted);font-size:14px}
+.tabs button.on{background:var(--accent);color:#fff}
+#search{flex:1;background:var(--card);border-color:transparent;box-shadow:var(--shadow);font-size:14px;padding:8px 12px}
+/* ---------- list ---------- */
+.mhead{display:flex;align-items:baseline;gap:8px;margin:16px 4px 6px;color:var(--muted);font-size:12.5px;font-weight:700;letter-spacing:1px}
+.mhead .n{font-weight:400}
+.row{
+  background:var(--card);border-radius:14px;box-shadow:var(--shadow);
+  display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:7px;cursor:pointer;
+}
+.row:active{transform:scale(.99)}
+.row .d{color:var(--muted);font-size:12px;width:34px;text-align:center;line-height:1.25;flex-shrink:0}
+.row .d b{display:block;font-size:15px;color:var(--ink)}
+.row .mid{flex:1;min-width:0}
+.row .t{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .tags{display:flex;gap:5px;margin-top:2px;align-items:center}
+.badge{font-size:10.5px;padding:1px 7px;border-radius:999px;font-weight:700}
+.badge.half{background:var(--ting-soft);color:var(--accent-ink)}
+.badge.advance{background:var(--bg);color:var(--muted);border:1px solid var(--line)}
+.badge.src{background:none;color:var(--muted);padding:1px 2px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.who{font-size:12px;font-weight:900;width:38px;text-align:center;border-radius:999px;padding:3px 0;flex-shrink:0}
+.who.lin{background:var(--lin-soft);color:var(--lin)}
+.who.ting{background:var(--ting-soft);color:var(--ting)}
+.row .amt{font-weight:900;font-size:16.5px;text-align:right;min-width:64px}
+.row .amt small{display:block;font-weight:400;font-size:10.5px;color:var(--muted)}
+.row.settled{opacity:.5}
+.row.settled .t{text-decoration:line-through}
+.empty{text-align:center;color:var(--muted);padding:34px 0 20px;font-size:14px}
+/* ---------- settlements ---------- */
+.srow{display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--line)}
+.srow:last-child{border-bottom:none}
+.srow .ic{font-size:18px}
+.srow .mid{flex:1}
+.srow .t{font-weight:700;font-size:14px}
+.srow .sub{font-size:12px;color:var(--muted)}
+.srow .amt{font-weight:900}
+.srow .undo{color:var(--muted);font-size:12px;padding:6px;text-decoration:underline}
+/* ---------- dialogs ---------- */
+dialog{
+  border:none;border-radius:20px;background:var(--card);color:var(--ink);
+  width:min(92vw,440px);padding:20px;box-shadow:0 20px 60px rgba(0,0,0,.3);
+  margin:auto;
+}
+dialog::backdrop{background:rgba(20,18,14,.45);backdrop-filter:blur(3px)}
+dialog h3{font-size:17px;font-weight:900;margin-bottom:14px}
+.field{margin-bottom:11px}
+.field label{display:block;font-size:12px;color:var(--muted);font-weight:700;margin-bottom:4px;letter-spacing:1px}
+.frow{display:flex;gap:8px}
+.frow .field{flex:1}
+.dlgbtns{display:flex;gap:10px;margin-top:16px;align-items:center}
+.ghost{color:var(--muted);padding:10px 12px;font-weight:700}
+.dangerbtn{color:var(--danger);padding:10px 6px;font-weight:700;margin-right:auto}
+textarea{min-height:130px;font-size:13px}
+.preview{max-height:40vh;overflow-y:auto;margin-top:10px}
+.previtem{display:flex;gap:8px;align-items:center;padding:7px 2px;border-bottom:1px solid var(--line);font-size:14px}
+.previtem .t{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.previtem .a{font-weight:700}
+.previtem .x{color:var(--danger);padding:2px 6px}
+/* ---------- login ---------- */
+#login{
+  position:fixed;inset:0;background:var(--bg);z-index:50;display:flex;
+  flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:30px;
+}
+#login .logo{font-size:52px}
+#login h1{font-size:22px;font-weight:900;letter-spacing:2px}
+#login p{color:var(--muted);font-size:13px}
+#pin{max-width:220px;text-align:center;font-size:26px;letter-spacing:12px;font-weight:900}
+#login .primary{max-width:220px;width:100%;flex:none}
+#loginerr{color:var(--danger);font-size:13px;min-height:20px}
+/* ---------- toast ---------- */
+#toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);
+  background:var(--ink);color:var(--bg);padding:10px 22px;border-radius:999px;
+  font-weight:700;font-size:14px;transition:transform .25s;z-index:99;box-shadow:var(--shadow);
+  max-width:88vw;text-align:center;
+}
+#toast.show{transform:translateX(-50%) translateY(0)}
+.spin{display:inline-block;animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div id="login" hidden>
+  <div class="logo">🧾</div>
+  <h1>琳婷帳本</h1>
+  <p>輸入 PIN 碼進入</p>
+  <input id="pin" inputmode="numeric" autocomplete="off" placeholder="••••">
+  <div id="loginerr"></div>
+  <button class="primary" id="loginbtn">進入</button>
+</div>
+
+<div class="wrap">
+  <header>
+    <h1>琳婷<span>帳本</span></h1>
+    <button class="iconbtn" id="pastebtn" title="貼上匯入">📋</button>
+    <button class="iconbtn" id="setbtn" title="設定">⚙️</button>
+  </header>
+
+  <div class="hero" id="hero"></div>
+
+  <div class="card">
+    <h2>快速記一筆</h2>
+    <form id="qform">
+      <div class="rows">
+        <div class="r1">
+          <div class="seg" id="qpayer"></div>
+          <div class="seg" id="qsplit">
+            <button type="button" data-v="half">平分</button>
+            <button type="button" data-v="advance">代墊</button>
+          </div>
+        </div>
+        <div class="r2">
+          <input id="qamount" inputmode="decimal" placeholder="金額" autocomplete="off">
+          <input id="qtitle" placeholder="品項或餐廳" autocomplete="off" list="sugg">
+          <datalist id="sugg"></datalist>
+        </div>
+        <div class="r3">
+          <input id="qdate" type="date">
+          <button class="primary" type="submit">＋ 記一筆</button>
+        </div>
+      </div>
+    </form>
+    <div class="hint">平分＝各付一半 ・ 代墊＝整筆算對方的 ・ 金額可輸入負數代表退款</div>
+  </div>
+
+  <div id="pendingwrap"></div>
+
+  <div class="bar">
+    <div class="tabs" id="tabs">
+      <button data-t="open" class="on">未結清</button>
+      <button data-t="all">全部</button>
+    </div>
+    <input id="search" placeholder="搜尋品項…">
+  </div>
+
+  <div id="list"></div>
+
+  <div class="card" id="settlecard" hidden>
+    <h2>結算紀錄</h2>
+    <div id="settles"></div>
+  </div>
+
+  <div class="empty" style="padding:20px 0 0;font-size:11.5px">aebalance ・ 資料存於 Supabase ・ 每晚自動匯入 Uber Eats</div>
+</div>
+
+<dialog id="editdlg">
+  <h3>編輯紀錄</h3>
+  <form method="dialog" id="editform">
+    <div class="frow">
+      <div class="field"><label>日期</label><input id="edate" type="date" required></div>
+      <div class="field"><label>金額</label><input id="eamount" inputmode="decimal" required></div>
+    </div>
+    <div class="field"><label>品項</label><input id="etitle" required></div>
+    <div class="frow">
+      <div class="field"><label>誰付的</label>
+        <div class="seg" id="epayer"></div>
+      </div>
+      <div class="field"><label>分法</label>
+        <div class="seg" id="esplit">
+          <button type="button" data-v="half">平分</button>
+          <button type="button" data-v="advance">代墊</button>
+        </div>
+      </div>
+    </div>
+    <div class="field"><label>備註</label><input id="enote"></div>
+    <div class="dlgbtns">
+      <button type="button" class="dangerbtn" id="edelete">刪除</button>
+      <button type="button" class="ghost" id="ecancel">取消</button>
+      <button type="submit" class="primary" style="flex:0 1 130px">儲存</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="settledlg">
+  <h3>結算付款</h3>
+  <div id="settleinfo" style="margin-bottom:12px;font-size:15px;line-height:1.9"></div>
+  <div class="field"><label>備註（選填）</label><input id="snote" placeholder="例如：LINE Pay 轉帳"></div>
+  <div class="dlgbtns">
+    <button type="button" class="ghost" id="scancel">取消</button>
+    <button type="button" class="primary" id="sconfirm" style="flex:0 1 160px">確認已付款 ✓</button>
+  </div>
+</dialog>
+
+<dialog id="pastedlg">
+  <h3>貼上匯入</h3>
+  <p style="font-size:12.5px;color:var(--muted);margin-bottom:8px">
+    支援：① Uber Eats 明細信全文（自動抓餐廳與總計）② 一行一筆「7/5 麥當勞 320」（日期可省略）
+  </p>
+  <textarea id="pastetext" placeholder="在這裡貼上…"></textarea>
+  <div class="frow" style="margin-top:10px">
+    <div class="field"><label>這些是誰付的</label><div class="seg" id="ppayer"></div></div>
+    <div class="field"><label>分法</label>
+      <div class="seg" id="psplit">
+        <button type="button" data-v="half">平分</button>
+        <button type="button" data-v="advance">代墊</button>
+      </div>
+    </div>
+  </div>
+  <div class="preview" id="preview"></div>
+  <div class="dlgbtns">
+    <button type="button" class="ghost" id="pcancel">取消</button>
+    <button type="button" class="primary" id="pimport" style="flex:0 1 170px" disabled>先貼上內容</button>
+  </div>
+</dialog>
+
+<dialog id="setdlg">
+  <h3>設定</h3>
+  <form method="dialog" id="setform">
+    <div class="frow">
+      <div class="field"><label>琳的顯示名</label><input id="cname_lin"></div>
+      <div class="field"><label>婷的顯示名</label><input id="cname_ting"></div>
+    </div>
+    <div class="frow">
+      <div class="field"><label>Uber 自動匯入預設付款人</label>
+        <select id="cuber_payer"><option value="lin"></option><option value="ting"></option></select>
+      </div>
+      <div class="field"><label>Uber 預設分法</label>
+        <select id="cuber_split"><option value="half">平分</option><option value="advance">代墊</option></select>
+      </div>
+    </div>
+    <div class="field"><label>變更 PIN 碼（留空＝不變更）</label><input id="cpin" inputmode="numeric" autocomplete="off" placeholder="新 PIN"></div>
+    <div class="dlgbtns">
+      <button type="button" class="ghost" id="setcancel">取消</button>
+      <button type="submit" class="primary" style="flex:0 1 130px">儲存</button>
+    </div>
+  </form>
+</dialog>
+
+<div id="toast"></div>
+
+<script>
+'use strict';
+var BASE = 'https://vrkrocxpdmtfmhzotfnk.supabase.co/functions/v1/aebalance';
+var PIN = localStorage.getItem('aeb_pin') || '';
+var state = { data: null, tab: 'open', q: '', editing: null };
+var qs = function (s) { return document.querySelector(s); };
+var qsa = function (s) { return Array.prototype.slice.call(document.querySelectorAll(s)); };
+
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+function money(n) {
+  var v = Math.round(Number(n) * 100) / 100;
+  return '$' + v.toLocaleString('zh-TW', { maximumFractionDigits: 2 });
+}
+function owedOf(e) {
+  if (e.owed_override != null) return Number(e.owed_override);
+  return e.split_type === 'half' ? Number(e.amount) / 2 : Number(e.amount);
+}
+function pname(p) {
+  var c = state.data ? state.data.config : {};
+  return p === 'lin' ? (c.name_lin || '琳') : (c.name_ting || '婷');
+}
+function toast(msg) {
+  var t = qs('#toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._h);
+  t._h = setTimeout(function () { t.classList.remove('show'); }, 2200);
+}
+function api(method, path, body) {
+  return fetch(BASE + path, {
+    method: method,
+    headers: { 'content-type': 'application/json', 'x-aeb-pin': PIN },
+    body: body ? JSON.stringify(body) : undefined
+  }).then(function (r) {
+    if (r.status === 401) { showLogin(); throw new Error('請重新輸入 PIN'); }
+    return r.json().then(function (j) {
+      if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+      return j;
+    });
+  });
+}
+
+/* ---------- segmented control ---------- */
+function initSeg(el, onChange) {
+  el.addEventListener('click', function (ev) {
+    var b = ev.target.closest('button');
+    if (!b) return;
+    Array.prototype.forEach.call(el.querySelectorAll('button'), function (x) { x.classList.remove('on'); });
+    b.classList.add('on');
+    if (onChange) onChange(b.dataset.v);
+  });
+}
+function segVal(el) {
+  var b = el.querySelector('button.on');
+  return b ? b.dataset.v : null;
+}
+function segSet(el, v) {
+  Array.prototype.forEach.call(el.querySelectorAll('button'), function (x) {
+    x.classList.toggle('on', x.dataset.v === v);
+  });
+}
+function payerSegHtml() {
+  return '<button type="button" data-v="lin">' + esc(pname('lin')) + '付</button>' +
+         '<button type="button" data-v="ting">' + esc(pname('ting')) + '付</button>';
+}
+
+/* ---------- login ---------- */
+function showLogin() {
+  qs('#login').hidden = false;
+  setTimeout(function () { qs('#pin').focus(); }, 50);
+}
+function doLogin() {
+  var pin = qs('#pin').value.trim();
+  if (!pin) return;
+  qs('#loginerr').textContent = '';
+  fetch(BASE + '/api/login', {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ pin: pin })
+  }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+    .then(function (res) {
+      if (!res.ok) { qs('#loginerr').textContent = res.j.error || 'PIN 錯誤'; return; }
+      PIN = pin;
+      localStorage.setItem('aeb_pin', pin);
+      qs('#login').hidden = true;
+      load();
+    }).catch(function () { qs('#loginerr').textContent = '連線失敗，再試一次'; });
+}
+qs('#loginbtn').addEventListener('click', doLogin);
+qs('#pin').addEventListener('keydown', function (e) { if (e.key === 'Enter') doLogin(); });
+
+/* ---------- data ---------- */
+function load(silent) {
+  if (!silent) qs('#hero').innerHTML = '<div class="lbl">載入中 <span class="spin">⏳</span></div>';
+  return api('GET', '/api/data').then(function (d) {
+    state.data = d;
+    render();
+  }).catch(function (e) {
+    if (!silent) toast(e.message);
+  });
+}
+
+/* ---------- render ---------- */
+function unsettledConfirmed() {
+  return state.data.expenses.filter(function (e) {
+    return e.settlement_id == null && e.status === 'confirmed';
+  });
+}
+function netBalance() {
+  var net = 0;
+  unsettledConfirmed().forEach(function (e) {
+    net += (e.paid_by === 'lin' ? 1 : -1) * owedOf(e);
+  });
+  return Math.round(net * 100) / 100;
+}
+
+function render() {
+  var d = state.data;
+  if (!d) return;
+  renderHero();
+  renderPending();
+  renderList();
+  renderSettles();
+  renderSuggestions();
+  // 動態刷新兩個付款人 segmented 的名字
+  var qp = qs('#qpayer');
+  if (!qp.dataset.ready) {
+    qp.innerHTML = payerSegHtml();
+    segSet(qp, localStorage.getItem('aeb_lastpayer') || 'lin');
+    qp.dataset.ready = '1';
+  } else {
+    qsa('#qpayer button').forEach(function (b) { b.textContent = pname(b.dataset.v) + '付'; });
+  }
+  if (!qs('#qsplit').querySelector('.on')) segSet(qs('#qsplit'), localStorage.getItem('aeb_lastsplit') || 'advance');
+}
+
+function renderHero() {
+  var net = netBalance();
+  var n = unsettledConfirmed().length;
+  var h = qs('#hero');
+  if (Math.abs(net) < 0.01) {
+    h.className = 'hero zero';
+    h.innerHTML = '<div class="lbl">目前結餘</div><div class="amt">🎉 兩不相欠</div>' +
+      '<div class="sub">' + n + ' 筆未結清紀錄</div>';
+    return;
+  }
+  var debtor = net > 0 ? 'ting' : 'lin';
+  var creditor = net > 0 ? 'lin' : 'ting';
+  h.className = 'hero';
+  h.innerHTML =
+    '<div class="lbl">目前結餘</div>' +
+    '<div class="who">' + esc(pname(debtor)) + ' <span class="arrow">─➤</span> ' + esc(pname(creditor)) + '</div>' +
+    '<div class="amt num">' + money(Math.abs(net)) + '</div>' +
+    '<div class="sub">' + n + ' 筆未結清 ・ ' + esc(pname(debtor)) + ' 應給 ' + esc(pname(creditor)) + '</div>' +
+    '<div class="actions"><button class="settlebtn" id="settlebtn">結算付款 ✓</button></div>';
+  qs('#settlebtn').addEventListener('click', openSettle);
+}
+
+function renderPending() {
+  var pend = state.data.expenses.filter(function (e) { return e.status === 'pending'; });
+  var w = qs('#pendingwrap');
+  if (!pend.length) { w.innerHTML = ''; return; }
+  var html = '<div class="card"><h2>🍔 自動匯入・待確認（' + pend.length + '）</h2>';
+  pend.forEach(function (e) {
+    html += '<div class="pcard" data-id="' + e.id + '">' +
+      '<div class="top"><div class="t">' + esc(e.title) + '</div><div class="a num">' + money(e.amount) + '</div></div>' +
+      '<div class="meta">' + esc(e.date) + ' ・ 來自 ' + (e.source === 'ubereats' ? 'Uber Eats 信件' : esc(e.source)) + '</div>' +
+      '<div class="ops">' +
+        '<div class="seg pseg-payer">' +
+          '<button type="button" data-v="lin" class="' + (e.paid_by === 'lin' ? 'on' : '') + '">' + esc(pname('lin')) + '付</button>' +
+          '<button type="button" data-v="ting" class="' + (e.paid_by === 'ting' ? 'on' : '') + '">' + esc(pname('ting')) + '付</button>' +
+        '</div>' +
+        '<div class="seg pseg-split">' +
+          '<button type="button" data-v="half" class="' + (e.split_type === 'half' ? 'on' : '') + '">平分</button>' +
+          '<button type="button" data-v="advance" class="' + (e.split_type === 'advance' ? 'on' : '') + '">代墊</button>' +
+        '</div>' +
+        '<button class="ok" data-act="confirm">✓ 入帳</button>' +
+        '<button class="no" data-act="del" title="刪除">✗</button>' +
+      '</div></div>';
+  });
+  html += '</div>';
+  w.innerHTML = html;
+}
+
+qs('#pendingwrap').addEventListener('click', function (ev) {
+  var segbtn = ev.target.closest('.seg button');
+  if (segbtn) {
+    var seg = segbtn.parentElement;
+    Array.prototype.forEach.call(seg.children, function (x) { x.classList.remove('on'); });
+    segbtn.classList.add('on');
+    return;
+  }
+  var act = ev.target.closest('[data-act]');
+  if (!act) return;
+  var card = ev.target.closest('.pcard');
+  var id = card.dataset.id;
+  if (act.dataset.act === 'del') {
+    if (!confirm('刪除這筆待確認紀錄？')) return;
+    api('DELETE', '/api/expense?id=' + id).then(function () {
+      state.data.expenses = state.data.expenses.filter(function (e) { return e.id !== id; });
+      render(); toast('已刪除');
+    }).catch(function (e) { toast(e.message); });
+  } else {
+    var payer = card.querySelector('.pseg-payer .on').dataset.v;
+    var split = card.querySelector('.pseg-split .on').dataset.v;
+    api('PATCH', '/api/expense?id=' + id, { status: 'confirmed', paid_by: payer, split_type: split })
+      .then(function (r) {
+        var i = state.data.expenses.findIndex(function (e) { return e.id === id; });
+        if (i >= 0) state.data.expenses[i] = r.item;
+        render(); toast('已入帳 ✓');
+      }).catch(function (e) { toast(e.message); });
+  }
+});
+
+function monthKey(dateStr) {
+  return dateStr.slice(0, 4) + '年' + Number(dateStr.slice(5, 7)) + '月';
+}
+function renderList() {
+  var d = state.data;
+  var rows = d.expenses.filter(function (e) {
+    if (e.status === 'pending') return false;
+    if (state.tab === 'open' && e.settlement_id != null) return false;
+    if (state.q && String(e.title).toLowerCase().indexOf(state.q) < 0 &&
+        String(e.note || '').toLowerCase().indexOf(state.q) < 0) return false;
+    return true;
+  });
+  var el = qs('#list');
+  if (!rows.length) {
+    el.innerHTML = '<div class="empty">' + (state.q ? '找不到符合的紀錄' : '目前沒有紀錄，記一筆吧！') + '</div>';
+    return;
+  }
+  var html = '';
+  var lastM = '';
+  rows.forEach(function (e) {
+    var m = monthKey(e.date);
+    if (m !== lastM) {
+      lastM = m;
+      var monthRows = rows.filter(function (x) { return monthKey(x.date) === m; });
+      html += '<div class="mhead">' + m + ' <span class="n">・ ' + monthRows.length + ' 筆</span></div>';
+    }
+    var srcIcon = e.source === 'ubereats' ? ' 🍔' : (e.source === 'sheet' ? ' 📄' : '');
+    var owe = owedOf(e);
+    html += '<div class="row' + (e.settlement_id ? ' settled' : '') + '" data-id="' + e.id + '">' +
+      '<div class="d">' + Number(e.date.slice(5, 7)) + '/<b>' + Number(e.date.slice(8, 10)) + '</b></div>' +
+      '<div class="mid"><div class="t">' + esc(e.title) + srcIcon + '</div>' +
+        '<div class="tags"><span class="badge ' + e.split_type + '">' + (e.split_type === 'half' ? '平分' : '代墊') + '</span>' +
+        (e.note ? '<span class="badge src">' + esc(e.note) + '</span>' : '') +
+        (e.settlement_id ? '<span class="badge src">已結清 ✓</span>' : '') +
+        '</div></div>' +
+      '<div class="who ' + e.paid_by + '">' + esc(pname(e.paid_by)) + '</div>' +
+      '<div class="amt num">' + money(e.amount) +
+        '<small>' + esc(pname(e.paid_by === 'lin' ? 'ting' : 'lin')) + '欠 ' + money(owe) + '</small></div>' +
+    '</div>';
+  });
+  el.innerHTML = html;
+}
+qs('#list').addEventListener('click', function (ev) {
+  var row = ev.target.closest('.row');
+  if (!row) return;
+  var e = state.data.expenses.find(function (x) { return x.id === row.dataset.id; });
+  if (e) openEdit(e);
+});
+
+function renderSettles() {
+  var list = state.data.settlements;
+  qs('#settlecard').hidden = !list.length;
+  var html = '';
+  list.forEach(function (s) {
+    var d = new Date(s.settled_at);
+    var ds = d.getFullYear() + '/' + (d.getMonth() + 1) + '/' + d.getDate();
+    html += '<div class="srow" data-id="' + s.id + '">' +
+      '<div class="ic">💸</div>' +
+      '<div class="mid"><div class="t">' + esc(pname(s.payer)) + ' 付給 ' + esc(pname(s.payer === 'lin' ? 'ting' : 'lin')) + '</div>' +
+      '<div class="sub">' + ds + (s.note ? ' ・ ' + esc(s.note) : '') + '</div></div>' +
+      '<div class="amt num">' + money(s.amount) + '</div>' +
+      '<button class="undo">復原</button></div>';
+  });
+  qs('#settles').innerHTML = html;
+}
+qs('#settles').addEventListener('click', function (ev) {
+  var b = ev.target.closest('.undo');
+  if (!b) return;
+  var id = ev.target.closest('.srow').dataset.id;
+  if (!confirm('復原這次結算？相關帳目會變回「未結清」。')) return;
+  api('DELETE', '/api/settlement?id=' + id).then(function () {
+    load(true); toast('已復原');
+  }).catch(function (e) { toast(e.message); });
+});
+
+function renderSuggestions() {
+  var freq = {};
+  state.data.expenses.forEach(function (e) {
+    freq[e.title] = (freq[e.title] || 0) + 1;
+  });
+  var top = Object.keys(freq).sort(function (a, b) { return freq[b] - freq[a]; }).slice(0, 40);
+  qs('#sugg').innerHTML = top.map(function (t) { return '<option value="' + esc(t) + '">'; }).join('');
+}
+
+/* ---------- quick add ---------- */
+initSeg(qs('#qpayer'), function (v) { localStorage.setItem('aeb_lastpayer', v); });
+initSeg(qs('#qsplit'), function (v) { localStorage.setItem('aeb_lastsplit', v); });
+qs('#qdate').value = new Date().toISOString().slice(0, 10);
+
+qs('#qform').addEventListener('submit', function (ev) {
+  ev.preventDefault();
+  var amt = parseFloat(String(qs('#qamount').value).replace(/,/g, ''));
+  var title = qs('#qtitle').value.trim();
+  if (!title || isNaN(amt) || amt === 0) { toast('請填品項和金額'); return; }
+  var item = {
+    date: qs('#qdate').value || new Date().toISOString().slice(0, 10),
+    title: title, amount: amt,
+    paid_by: segVal(qs('#qpayer')) || 'lin',
+    split_type: segVal(qs('#qsplit')) || 'advance',
+    source: 'manual'
+  };
+  var btn = qs('#qform .primary');
+  btn.disabled = true;
+  api('POST', '/api/expenses', item).then(function (r) {
+    if (r.items && r.items[0]) state.data.expenses.unshift(r.items[0]);
+    state.data.expenses.sort(function (a, b) { return a.date < b.date ? 1 : -1; });
+    render();
+    qs('#qamount').value = ''; qs('#qtitle').value = '';
+    qs('#qamount').focus();
+    toast('已記帳：' + title + ' ' + money(amt));
+  }).catch(function (e) { toast(e.message); })
+    .finally(function () { btn.disabled = false; });
+});
+
+/* ---------- edit dialog ---------- */
+var editdlg = qs('#editdlg');
+initSeg(qs('#epayer'));
+initSeg(qs('#esplit'));
+function openEdit(e) {
+  state.editing = e;
+  qs('#epayer').innerHTML = payerSegHtml();
+  qs('#edate').value = e.date;
+  qs('#eamount').value = Number(e.amount);
+  qs('#etitle').value = e.title;
+  qs('#enote').value = e.note || '';
+  segSet(qs('#epayer'), e.paid_by);
+  segSet(qs('#esplit'), e.split_type);
+  editdlg.showModal();
+}
+qs('#ecancel').addEventListener('click', function () { editdlg.close(); });
+qs('#edelete').addEventListener('click', function () {
+  var e = state.editing;
+  if (!confirm('刪除「' + e.title + ' ' + money(e.amount) + '」？')) return;
+  api('DELETE', '/api/expense?id=' + e.id).then(function () {
+    state.data.expenses = state.data.expenses.filter(function (x) { return x.id !== e.id; });
+    editdlg.close(); render(); toast('已刪除');
+  }).catch(function (er) { toast(er.message); });
+});
+qs('#editform').addEventListener('submit', function (ev) {
+  ev.preventDefault();
+  var e = state.editing;
+  var patch = {
+    date: qs('#edate').value,
+    amount: parseFloat(String(qs('#eamount').value).replace(/,/g, '')),
+    title: qs('#etitle').value.trim(),
+    note: qs('#enote').value.trim() || null,
+    paid_by: segVal(qs('#epayer')),
+    split_type: segVal(qs('#esplit'))
+  };
+  if (!patch.title || isNaN(patch.amount)) { toast('請填品項和金額'); return; }
+  api('PATCH', '/api/expense?id=' + e.id, patch).then(function (r) {
+    var i = state.data.expenses.findIndex(function (x) { return x.id === e.id; });
+    if (i >= 0) state.data.expenses[i] = r.item;
+    state.data.expenses.sort(function (a, b) { return a.date < b.date ? 1 : -1; });
+    editdlg.close(); render(); toast('已儲存 ✓');
+  }).catch(function (er) { toast(er.message); });
+});
+
+/* ---------- settle dialog ---------- */
+var settledlg = qs('#settledlg');
+function openSettle() {
+  var net = netBalance();
+  var debtor = net > 0 ? 'ting' : 'lin';
+  var creditor = net > 0 ? 'lin' : 'ting';
+  qs('#settleinfo').innerHTML =
+    '共 <b>' + unsettledConfirmed().length + '</b> 筆未結清紀錄。<br>' +
+    '<b style="font-size:20px">' + esc(pname(debtor)) + ' 要給 ' + esc(pname(creditor)) +
+    ' <span class="num">' + money(Math.abs(net)) + '</span></b><br>' +
+    '<span style="color:var(--muted);font-size:13px">確認後這些紀錄會標記為已結清（可復原）。</span>';
+  qs('#snote').value = '';
+  settledlg.showModal();
+}
+qs('#scancel').addEventListener('click', function () { settledlg.close(); });
+qs('#sconfirm').addEventListener('click', function () {
+  var b = qs('#sconfirm');
+  b.disabled = true;
+  api('POST', '/api/settle', { note: qs('#snote').value.trim() || null }).then(function (r) {
+    settledlg.close();
+    toast('結算完成 🎉 ' + money(r.settlement.amount));
+    return load(true);
+  }).catch(function (e) { toast(e.message); })
+    .finally(function () { b.disabled = false; });
+});
+
+/* ---------- paste import ---------- */
+var pastedlg = qs('#pastedlg');
+var parsed = [];
+initSeg(qs('#ppayer'));
+initSeg(qs('#psplit'));
+qs('#pastebtn').addEventListener('click', function () {
+  qs('#ppayer').innerHTML = payerSegHtml();
+  var c = state.data ? state.data.config : {};
+  segSet(qs('#ppayer'), c.uber_default_payer || 'ting');
+  segSet(qs('#psplit'), c.uber_default_split || 'half');
+  qs('#pastetext').value = '';
+  parsed = [];
+  renderPreview();
+  pastedlg.showModal();
+});
+qs('#pcancel').addEventListener('click', function () { pastedlg.close(); });
+qs('#pastetext').addEventListener('input', function () {
+  parsed = parsePaste(qs('#pastetext').value);
+  renderPreview();
+});
+
+function parsePaste(text) {
+  var out = [];
+  var today = new Date();
+  // ① Uber Eats 明細信：您在〇〇訂購的電子明細 … 總計 $xxx （日期取信中「YYYY 年 M 月 D 日」）
+  var uberRe = /在([^\n]{1,60}?)訂購的電子明細[\s\S]{0,600}?總計\s*\$?\s*([0-9][0-9,]*(?:\.[0-9]+)?)/g;
+  var dateRe = /([0-9]{4})\s*年\s*([0-9]{1,2})\s*月\s*([0-9]{1,2})\s*日/;
+  var m;
+  while ((m = uberRe.exec(text)) !== null) {
+    var before = text.slice(Math.max(0, m.index - 400), m.index);
+    var dm = dateRe.exec(before) || dateRe.exec(text);
+    var date = dm
+      ? dm[1] + '-' + ('0' + dm[2]).slice(-2) + '-' + ('0' + dm[3]).slice(-2)
+      : today.toISOString().slice(0, 10);
+    out.push({ date: date, title: m[1].trim(), amount: parseFloat(m[2].replace(/,/g, '')), source: 'paste' });
+  }
+  if (out.length) return out;
+  // ② 一行一筆：[M/D ]品項 金額
+  text.split(/\n+/).forEach(function (line) {
+    line = line.trim();
+    if (!line) return;
+    var lm = /^(?:([0-9]{1,2})[\/\.\-月]([0-9]{1,2})日?\s+)?(.+?)\s+(-?[0-9][0-9,]*(?:\.[0-9]+)?)$/.exec(line);
+    if (!lm) return;
+    var y = today.getFullYear();
+    var date;
+    if (lm[1]) {
+      var mo = Number(lm[1]), da = Number(lm[2]);
+      if (mo > today.getMonth() + 1) y = y - 1; // 例如現在 7 月貼 12/25 → 去年
+      date = y + '-' + ('0' + mo).slice(-2) + '-' + ('0' + da).slice(-2);
+    } else {
+      date = today.toISOString().slice(0, 10);
+    }
+    out.push({ date: date, title: lm[3].trim(), amount: parseFloat(lm[4].replace(/,/g, '')), source: 'paste' });
+  });
+  return out;
+}
+function renderPreview() {
+  var el = qs('#preview');
+  var btn = qs('#pimport');
+  if (!parsed.length) {
+    el.innerHTML = '';
+    btn.disabled = true;
+    btn.textContent = qs('#pastetext').value.trim() ? '看不懂內容 🤔' : '先貼上內容';
+    return;
+  }
+  el.innerHTML = parsed.map(function (p, i) {
+    return '<div class="previtem"><span style="color:var(--muted);font-size:12px">' + esc(p.date.slice(5)) + '</span>' +
+      '<span class="t">' + esc(p.title) + '</span><span class="a num">' + money(p.amount) + '</span>' +
+      '<button class="x" data-i="' + i + '">✗</button></div>';
+  }).join('');
+  btn.disabled = false;
+  btn.textContent = '匯入 ' + parsed.length + ' 筆 ✓';
+}
+qs('#preview').addEventListener('click', function (ev) {
+  var b = ev.target.closest('.x');
+  if (!b) return;
+  parsed.splice(Number(b.dataset.i), 1);
+  renderPreview();
+});
+qs('#pimport').addEventListener('click', function () {
+  if (!parsed.length) return;
+  var payer = segVal(qs('#ppayer')) || 'ting';
+  var split = segVal(qs('#psplit')) || 'half';
+  var items = parsed.map(function (p) {
+    return { date: p.date, title: p.title, amount: p.amount, paid_by: payer, split_type: split, source: 'paste' };
+  });
+  var btn = qs('#pimport');
+  btn.disabled = true;
+  api('POST', '/api/expenses', { items: items }).then(function (r) {
+    pastedlg.close();
+    toast('已匯入 ' + r.inserted + ' 筆 ✓');
+    return load(true);
+  }).catch(function (e) { toast(e.message); })
+    .finally(function () { btn.disabled = false; });
+});
+
+/* ---------- settings ---------- */
+var setdlg = qs('#setdlg');
+qs('#setbtn').addEventListener('click', function () {
+  var c = state.data ? state.data.config : {};
+  qs('#cname_lin').value = c.name_lin || '琳';
+  qs('#cname_ting').value = c.name_ting || '婷';
+  var po = qs('#cuber_payer');
+  po.options[0].textContent = c.name_lin || '琳';
+  po.options[1].textContent = c.name_ting || '婷';
+  po.value = c.uber_default_payer || 'ting';
+  qs('#cuber_split').value = c.uber_default_split || 'half';
+  qs('#cpin').value = '';
+  setdlg.showModal();
+});
+qs('#setcancel').addEventListener('click', function () { setdlg.close(); });
+qs('#setform').addEventListener('submit', function (ev) {
+  ev.preventDefault();
+  var body = {
+    name_lin: qs('#cname_lin').value.trim() || '琳',
+    name_ting: qs('#cname_ting').value.trim() || '婷',
+    uber_default_payer: qs('#cuber_payer').value,
+    uber_default_split: qs('#cuber_split').value
+  };
+  var newpin = qs('#cpin').value.trim();
+  if (newpin) body.pin = newpin;
+  api('POST', '/api/config', body).then(function () {
+    if (newpin) { PIN = newpin; localStorage.setItem('aeb_pin', newpin); }
+    setdlg.close();
+    toast('設定已儲存 ✓');
+    return load(true);
+  }).catch(function (e) { toast(e.message); });
+});
+
+/* ---------- tabs & search ---------- */
+qs('#tabs').addEventListener('click', function (ev) {
+  var b = ev.target.closest('button');
+  if (!b) return;
+  qsa('#tabs button').forEach(function (x) { x.classList.remove('on'); });
+  b.classList.add('on');
+  state.tab = b.dataset.t;
+  renderList();
+});
+qs('#search').addEventListener('input', function () {
+  state.q = this.value.trim().toLowerCase();
+  renderList();
+});
+
+/* ---------- boot ---------- */
+document.addEventListener('visibilitychange', function () {
+  if (!document.hidden && state.data) load(true);
+});
+if (PIN) {
+  load(); // 若 PIN 已失效，api() 會自動叫出登入畫面
+} else {
+  showLogin();
+}
+</script>
+</body>
+</html>
