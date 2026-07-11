@@ -479,10 +479,11 @@ function api(method, path, body) {
 }
 
 function openDlg(d) {
+  // 把焦點導到對話框標題（可聚焦但非輸入框），手機才不會一開就彈鍵盤／月曆
+  var h = d.querySelector('h3');
+  if (h) h.setAttribute('tabindex', '-1');
   d.showModal();
-  setTimeout(function () {
-    if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
-  }, 0);
+  if (h) { try { h.focus({ preventScroll: true }); } catch (e) { h.focus(); } }
 }
 /* ---------- segmented control ---------- */
 function initSeg(el, onChange) {
