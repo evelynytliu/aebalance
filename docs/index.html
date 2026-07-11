@@ -209,6 +209,21 @@ textarea{min-height:130px;font-size:13px}
 .mhead .sum{margin-left:auto;font-weight:700;color:var(--ink);opacity:.75}
 .pmore{width:100%;text-align:center;color:var(--accent-ink);font-weight:700;padding:9px;font-size:13.5px}
 @keyframes sp{to{transform:rotate(360deg)}}
+input[type=date]{min-width:0}
+dialog .seg{flex-wrap:wrap}
+@media (max-width:560px){
+  dialog{padding:18px 16px;width:94vw}
+  dialog .seg button{padding:7px 9px;font-size:12.5px}
+  .frow{flex-wrap:wrap}
+  .frow .field{flex:1 1 46%}
+  #qform .r3{flex-wrap:wrap}
+  #qdate{width:calc(52% - 4px)}
+  #qdebtor{width:calc(48% - 4px) !important}
+  #qform .r3 .primary{flex:1 1 100%}
+  .fbar select{font-size:12px;padding:7px 6px}
+  .pcard .ops{gap:6px}
+  .pcard .seg button{padding:6px 9px;font-size:12.5px}
+}
 </style>
 </head>
 <body>
@@ -463,6 +478,12 @@ function api(method, path, body) {
   });
 }
 
+function openDlg(d) {
+  d.showModal();
+  setTimeout(function () {
+    if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
+  }, 0);
+}
 /* ---------- segmented control ---------- */
 function initSeg(el, onChange) {
   el.addEventListener('click', function (ev) {
@@ -870,7 +891,7 @@ function openEdit(e) {
   ed.value = dv;
   segSet(qs('#epayer'), e.paid_by);
   segSet(qs('#esplit'), e.split_type);
-  editdlg.showModal();
+  openDlg(editdlg);
 }
 qs('#ecancel').addEventListener('click', function () { editdlg.close(); });
 qs('#edelete').addEventListener('click', function () {
@@ -915,7 +936,7 @@ function openSettle() {
     ' <span class="num">' + money(Math.abs(net)) + '</span></b><br>' +
     '<span style="color:var(--muted);font-size:13px">確認後這些紀錄會標記為已結清（可復原）。</span>';
   qs('#snote').value = '';
-  settledlg.showModal();
+  openDlg(settledlg);
 }
 qs('#scancel').addEventListener('click', function () { settledlg.close(); });
 qs('#sconfirm').addEventListener('click', function () {
@@ -942,7 +963,7 @@ qs('#pastebtn').addEventListener('click', function () {
   qs('#pastetext').value = '';
   parsed = [];
   renderPreview();
-  pastedlg.showModal();
+  openDlg(pastedlg);
 });
 qs('#pcancel').addEventListener('click', function () { pastedlg.close(); });
 qs('#pastetext').addEventListener('input', function () {
@@ -1037,7 +1058,7 @@ qs('#setbtn').addEventListener('click', function () {
   po.value = c.uber_default_payer || 'ting';
   qs('#cuber_split').value = c.uber_default_split || 'half';
   qs('#cpin').value = '';
-  setdlg.showModal();
+  openDlg(setdlg);
 });
 qs('#setcancel').addEventListener('click', function () { setdlg.close(); });
 qs('#setform').addEventListener('submit', function (ev) {
