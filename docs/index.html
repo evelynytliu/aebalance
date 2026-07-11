@@ -179,6 +179,32 @@ textarea{min-height:130px;font-size:13px}
 }
 #toast.show{transform:translateX(-50%) translateY(0)}
 .spin{display:inline-block;animation:sp 1s linear infinite}
+/* ---------- layout：手機直排順序 / 桌機雙欄 ---------- */
+.cols{display:flex;flex-direction:column}
+.colL,.colR{display:contents}
+#hero{order:1}
+#qcard{order:2}
+#pendingwrap{order:3}
+.bar{order:4}
+#list{order:5}
+#settlecard{order:6}
+#foot{order:7}
+@media (min-width:960px){
+  .wrap{max-width:1200px}
+  .cols{display:grid;grid-template-columns:410px minmax(0,1fr);gap:0 24px;align-items:start}
+  .colL{display:block;position:sticky;top:14px;max-height:calc(100vh - 28px);overflow-y:auto;padding-bottom:10px;scrollbar-width:thin}
+  .colR{display:block;min-width:0}
+  .colR .bar{margin-top:0}
+  .colR #pendingwrap .card{margin-top:0;margin-bottom:14px}
+  .colR #list .mhead{margin-top:14px}
+  .row{margin-bottom:8px}
+}
+/* ---------- 月份摺疊 ---------- */
+.mhead{cursor:pointer;-webkit-user-select:none;user-select:none;padding:6px 4px;border-radius:10px}
+.mhead:active{background:var(--line)}
+.mhead .chev{width:18px;display:inline-block;font-size:11px}
+.mhead .sum{margin-left:auto;font-weight:700;color:var(--ink);opacity:.75}
+.pmore{width:100%;text-align:center;color:var(--accent-ink);font-weight:700;padding:9px;font-size:13.5px}
 @keyframes sp{to{transform:rotate(360deg)}}
 </style>
 </head>
@@ -199,9 +225,11 @@ textarea{min-height:130px;font-size:13px}
     <button class="iconbtn" id="setbtn" title="設定">⚙️</button>
   </header>
 
+  <div class="cols">
+  <div class="colL">
   <div class="hero" id="hero"></div>
 
-  <div class="card">
+  <div class="card" id="qcard">
     <h2>快速記一筆</h2>
     <form id="qform">
       <div class="rows">
@@ -226,6 +254,15 @@ textarea{min-height:130px;font-size:13px}
     <div class="hint">平分＝各付一半 ・ 代墊＝整筆算對方的 ・ 金額可輸入負數代表退款</div>
   </div>
 
+  <div class="card" id="settlecard" hidden>
+    <h2>結算紀錄</h2>
+    <div id="settles"></div>
+  </div>
+
+  <div class="empty" id="foot" style="padding:20px 0 0;font-size:11.5px">aebalance ・ 資料存於 Supabase ・ 每晚自動匯入 Uber Eats</div>
+  </div>
+
+  <div class="colR">
   <div id="pendingwrap"></div>
 
   <div class="bar">
@@ -237,13 +274,8 @@ textarea{min-height:130px;font-size:13px}
   </div>
 
   <div id="list"></div>
-
-  <div class="card" id="settlecard" hidden>
-    <h2>結算紀錄</h2>
-    <div id="settles"></div>
   </div>
-
-  <div class="empty" style="padding:20px 0 0;font-size:11.5px">aebalance ・ 資料存於 Supabase ・ 每晚自動匯入 Uber Eats</div>
+  </div>
 </div>
 
 <dialog id="editdlg">
@@ -335,7 +367,7 @@ textarea{min-height:130px;font-size:13px}
 'use strict';
 var BASE = 'https://vrkrocxpdmtfmhzotfnk.supabase.co/functions/v1/aebalance';
 var PIN = localStorage.getItem('aeb_pin') || '';
-var state = { data: null, tab: 'open', q: '', editing: null };
+var state = { data: null, tab: 'open', q: '', editing: null, openMonths: null, pendAll: false };
 var qs = function (s) { return document.querySelector(s); };
 var qsa = function (s) { return Array.prototype.slice.call(document.querySelectorAll(s)); };
 
@@ -513,8 +545,9 @@ function renderPending() {
   var pend = state.data.expenses.filter(function (e) { return e.status === 'pending'; });
   var w = qs('#pendingwrap');
   if (!pend.length) { w.innerHTML = ''; return; }
+  var shown = state.pendAll ? pend : pend.slice(0, 3);
   var html = '<div class="card"><h2>🍔 自動匯入・待確認（' + pend.length + '）</h2>';
-  pend.forEach(function (e) {
+  shown.forEach(function (e) {
     html += '<div class="pcard" data-id="' + e.id + '">' +
       '<div class="top"><div class="t">' + esc(e.title) + '</div><div class="a num">' + money(e.amount) + '</div></div>' +
       '<div class="meta">' + esc(e.date) + ' ・ 來自 ' + (e.source === 'ubereats' ? 'Uber Eats 信件' : esc(e.source)) + '</div>' +
@@ -531,6 +564,10 @@ function renderPending() {
         '<button class="no" data-act="del" title="刪除">✗</button>' +
       '</div></div>';
   });
+  if (pend.length > 3) {
+    html += '<button class="pmore" data-act="pendtoggle">' +
+      (state.pendAll ? '收合 ▴' : '顯示全部 ' + pend.length + ' 筆 ▾') + '</button>';
+  }
   html += '</div>';
   w.innerHTML = html;
 }
@@ -545,6 +582,11 @@ qs('#pendingwrap').addEventListener('click', function (ev) {
   }
   var act = ev.target.closest('[data-act]');
   if (!act) return;
+  if (act.dataset.act === 'pendtoggle') {
+    state.pendAll = !state.pendAll;
+    renderPending();
+    return;
+  }
   var card = ev.target.closest('.pcard');
   var id = card.dataset.id;
   if (act.dataset.act === 'del') {
@@ -582,6 +624,16 @@ function renderList() {
     el.innerHTML = '<div class="empty">' + (state.q ? '找不到符合的紀錄' : '目前沒有紀錄，記一筆吧！') + '</div>';
     return;
   }
+  // 展開狀態初始化：桌機預設全開、手機只開最新月份
+  if (!state.openMonths) {
+    state.openMonths = {};
+    if (window.matchMedia('(min-width:960px)').matches) {
+      rows.forEach(function (e) { state.openMonths[monthKey(e.date)] = true; });
+    } else if (rows.length) {
+      state.openMonths[monthKey(rows[0].date)] = true;
+    }
+  }
+  var searching = !!state.q;
   var html = '';
   var lastM = '';
   rows.forEach(function (e) {
@@ -589,8 +641,13 @@ function renderList() {
     if (m !== lastM) {
       lastM = m;
       var monthRows = rows.filter(function (x) { return monthKey(x.date) === m; });
-      html += '<div class="mhead">' + m + ' <span class="n">・ ' + monthRows.length + ' 筆</span></div>';
+      var msum = 0;
+      monthRows.forEach(function (x) { msum += Number(x.amount); });
+      var mOpen = searching || state.openMonths[m];
+      html += '<div class="mhead" data-m="' + m + '"><span class="chev">' + (mOpen ? '▼' : '►') + '</span>' + m +
+        ' <span class="n">・ ' + monthRows.length + ' 筆</span><span class="sum num">' + money(msum) + '</span></div>';
     }
+    if (!(searching || state.openMonths[m])) return;
     var srcIcon = e.source === 'ubereats' ? ' 🍔' : (e.source === 'sheet' ? ' 📄' : '');
     var owe = owedOf(e);
     html += '<div class="row' + (e.settlement_id ? ' settled' : '') + '" data-id="' + e.id + '">' +
@@ -608,6 +665,12 @@ function renderList() {
   el.innerHTML = html;
 }
 qs('#list').addEventListener('click', function (ev) {
+  var mh = ev.target.closest('.mhead');
+  if (mh) {
+    state.openMonths[mh.dataset.m] = !state.openMonths[mh.dataset.m];
+    renderList();
+    return;
+  }
   var row = ev.target.closest('.row');
   if (!row) return;
   var e = state.data.expenses.find(function (x) { return x.id === row.dataset.id; });
@@ -670,6 +733,7 @@ qs('#qform').addEventListener('submit', function (ev) {
   btn.disabled = true;
   api('POST', '/api/expenses', item).then(function (r) {
     if (r.items && r.items[0]) state.data.expenses.unshift(r.items[0]);
+    if (state.openMonths) state.openMonths[monthKey(item.date)] = true;
     state.data.expenses.sort(function (a, b) { return a.date < b.date ? 1 : -1; });
     render();
     qs('#qamount').value = ''; qs('#qtitle').value = '';
