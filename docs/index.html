@@ -104,6 +104,10 @@ header h1 span{color:var(--accent)}
 .tabs button{padding:7px 16px;border-radius:9px;font-weight:700;color:var(--muted);font-size:14px}
 .tabs button.on{background:var(--accent);color:#fff}
 #search{flex:1;background:var(--card);border-color:transparent;box-shadow:var(--shadow);font-size:14px;padding:8px 12px}
+.fbar{display:flex;gap:8px;margin-top:10px}
+.fbar select{flex:1;min-width:0;font-size:13px;padding:7px 8px;background:var(--card);border-color:transparent;box-shadow:var(--shadow);color:var(--muted);font-weight:700}
+.fbar select.on{color:var(--accent-ink);border-color:var(--accent)}
+.fsum{font-size:12.5px;color:var(--muted);margin:12px 4px 0;text-align:right}
 /* ---------- list ---------- */
 .mhead{display:flex;align-items:baseline;gap:8px;margin:16px 4px 6px;color:var(--muted);font-size:12.5px;font-weight:700;letter-spacing:1px}
 .mhead .n{font-weight:400}
@@ -187,6 +191,7 @@ textarea{min-height:130px;font-size:13px}
 #qcard{order:2}
 #pendingwrap{order:3}
 .bar{order:4}
+.fbar{order:4}
 #list{order:5}
 #settlecard{order:6}
 #foot{order:7}
@@ -269,9 +274,31 @@ textarea{min-height:130px;font-size:13px}
   <div class="bar">
     <div class="tabs" id="tabs">
       <button data-t="open" class="on">未結清</button>
+      <button data-t="settled">已結清</button>
       <button data-t="all">全部</button>
     </div>
     <input id="search" placeholder="搜尋品項…">
+  </div>
+
+  <div class="fbar">
+    <select id="fpayer">
+      <option value="">誰付：全部</option>
+      <option value="lin">琳付</option>
+      <option value="ting">婷付</option>
+    </select>
+    <select id="ftype">
+      <option value="">類型：全部</option>
+      <option value="half">平分</option>
+      <option value="advance">代墊</option>
+      <option value="custom">拆帳(自訂)</option>
+    </select>
+    <select id="fsrc">
+      <option value="">來源：全部</option>
+      <option value="ubereats">Uber Eats</option>
+      <option value="sheet">試算表匯入</option>
+      <option value="manual">手動</option>
+      <option value="paste">貼上匯入</option>
+    </select>
   </div>
 
   <div id="list"></div>
@@ -369,7 +396,7 @@ textarea{min-height:130px;font-size:13px}
 'use strict';
 var BASE = 'https://vrkrocxpdmtfmhzotfnk.supabase.co/functions/v1/aebalance';
 var PIN = localStorage.getItem('aeb_pin') || '';
-var state = { data: null, tab: 'open', q: '', editing: null, openMonths: null, pendAll: false };
+var state = { data: null, tab: 'open', q: '', editing: null, openMonths: null, pendAll: false, fPayer: '', fType: '', fSrc: '' };
 var qs = function (s) { return document.querySelector(s); };
 var qsa = function (s) { return Array.prototype.slice.call(document.querySelectorAll(s)); };
 
@@ -519,6 +546,9 @@ function render() {
     qsa('#qpayer button').forEach(function (b) { b.textContent = pname(b.dataset.v) + '付'; });
   }
   if (!qs('#qsplit').querySelector('.on')) segSet(qs('#qsplit'), localStorage.getItem('aeb_lastsplit') || 'advance');
+  var fp = qs('#fpayer');
+  fp.options[1].textContent = pname('lin') + '付';
+  fp.options[2].textContent = pname('ting') + '付';
 }
 
 function renderHero() {
@@ -626,6 +656,13 @@ function renderList() {
   var rows = d.expenses.filter(function (e) {
     if (e.status === 'pending') return false;
     if (state.tab === 'open' && e.settlement_id != null) return false;
+    if (state.tab === 'settled' && e.settlement_id == null) return false;
+    if (state.fPayer && e.paid_by !== state.fPayer) return false;
+    if (state.fType) {
+      if (state.fType === 'custom') { if (e.owed_override == null) return false; }
+      else if (e.split_type !== state.fType || e.owed_override != null) return false;
+    }
+    if (state.fSrc && e.source !== state.fSrc) return false;
     if (state.q && String(e.title).toLowerCase().indexOf(state.q) < 0 &&
         String(e.note || '').toLowerCase().indexOf(state.q) < 0) return false;
     return true;
@@ -644,8 +681,10 @@ function renderList() {
       state.openMonths[monthKey(rows[0].date)] = true;
     }
   }
-  var searching = !!state.q;
-  var html = '';
+  var searching = !!state.q || !!state.fPayer || !!state.fType || !!state.fSrc;
+  var tot = 0, owedT = 0;
+  rows.forEach(function (e) { tot += Number(e.amount); owedT += owedOf(e); });
+  var html = '<div class="fsum num">共 ' + rows.length + ' 筆 ・ 金額合計 ' + money(tot) + ' ・ 對方應付合計 ' + money(owedT) + '</div>';
   var lastM = '';
   rows.forEach(function (e) {
     var m = monthKey(e.date);
@@ -969,6 +1008,13 @@ qs('#tabs').addEventListener('click', function (ev) {
 qs('#search').addEventListener('input', function () {
   state.q = this.value.trim().toLowerCase();
   renderList();
+});
+[['fpayer', 'fPayer'], ['ftype', 'fType'], ['fsrc', 'fSrc']].forEach(function (pair) {
+  qs('#' + pair[0]).addEventListener('change', function () {
+    state[pair[1]] = this.value;
+    this.classList.toggle('on', !!this.value);
+    renderList();
+  });
 });
 
 /* ---------- boot ---------- */
