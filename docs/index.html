@@ -93,7 +93,8 @@ header h1 span{color:var(--accent)}
 .pcard .top{display:flex;align-items:baseline;gap:8px}
 .pcard .top .t{font-weight:700;flex:1}
 .pcard .top .a{font-weight:900;font-size:17px}
-.pcard .meta{font-size:12px;color:var(--warn);margin:1px 0 8px}
+.pcard .meta{font-size:12px;color:var(--warn);margin:1px 0 4px}
+.pcard .pnote{font-size:12px;opacity:.8;margin:0 0 8px;line-height:1.5;word-break:break-all}
 .pcard .ops{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .pcard .ok{background:var(--accent);color:#fff;border-radius:10px;padding:7px 16px;font-weight:700}
 .pcard .no{color:var(--danger);padding:7px 8px;font-size:17px}
@@ -297,6 +298,7 @@ textarea{min-height:130px;font-size:13px}
         </div>
       </div>
     </div>
+    <div class="field"><label>對方應付金額（留空＝依分法自動計算）</label><input id="eowed" inputmode="decimal" placeholder="自動"></div>
     <div class="field"><label>備註</label><input id="enote"></div>
     <div class="dlgbtns">
       <button type="button" class="dangerbtn" id="edelete">刪除</button>
@@ -550,7 +552,9 @@ function renderPending() {
   shown.forEach(function (e) {
     html += '<div class="pcard" data-id="' + e.id + '">' +
       '<div class="top"><div class="t">' + esc(e.title) + '</div><div class="a num">' + money(e.amount) + '</div></div>' +
-      '<div class="meta">' + esc(e.date) + ' ・ 來自 ' + (e.source === 'ubereats' ? 'Uber Eats 信件' : esc(e.source)) + '</div>' +
+      '<div class="meta">' + esc(e.date) + ' ・ ' + (e.source === 'ubereats' ? 'Uber Eats' : esc(e.source)) +
+        ' ・ ' + esc(pname(e.paid_by === 'lin' ? 'ting' : 'lin')) + '應付 <b>' + money(owedOf(e)) + '</b>（點卡片可改）</div>' +
+      (e.note ? '<div class="pnote">' + esc(e.note) + '</div>' : '') +
       '<div class="ops">' +
         '<div class="seg pseg-payer">' +
           '<button type="button" data-v="lin" class="' + (e.paid_by === 'lin' ? 'on' : '') + '">' + esc(pname('lin')) + '付</button>' +
@@ -660,7 +664,9 @@ function renderList() {
     html += '<div class="row' + (e.settlement_id ? ' settled' : '') + '" data-id="' + e.id + '">' +
       '<div class="d">' + Number(e.date.slice(5, 7)) + '/<b>' + Number(e.date.slice(8, 10)) + '</b></div>' +
       '<div class="mid"><div class="t">' + esc(e.title) + srcIcon + '</div>' +
-        '<div class="tags"><span class="badge ' + e.split_type + '">' + (e.split_type === 'half' ? '平分' : '代墊') + '</span>' +
+        '<div class="tags">' + (e.owed_override != null
+          ? '<span class="badge half">拆帳</span>'
+          : '<span class="badge ' + e.split_type + '">' + (e.split_type === 'half' ? '平分' : '代墊') + '</span>') +
         (e.note ? '<span class="badge src">' + esc(e.note) + '</span>' : '') +
         (e.settlement_id ? '<span class="badge src">已結清 ✓</span>' : '') +
         '</div></div>' +
@@ -761,6 +767,7 @@ function openEdit(e) {
   qs('#eamount').value = Number(e.amount);
   qs('#etitle').value = e.title;
   qs('#enote').value = e.note || '';
+  qs('#eowed').value = e.owed_override != null ? Number(e.owed_override) : '';
   segSet(qs('#epayer'), e.paid_by);
   segSet(qs('#esplit'), e.split_type);
   editdlg.showModal();
@@ -782,6 +789,7 @@ qs('#editform').addEventListener('submit', function (ev) {
     amount: parseFloat(String(qs('#eamount').value).replace(/,/g, '')),
     title: qs('#etitle').value.trim(),
     note: qs('#enote').value.trim() || null,
+    owed_override: qs('#eowed').value.trim() === '' ? null : parseFloat(String(qs('#eowed').value).replace(/,/g, '')),
     paid_by: segVal(qs('#epayer')),
     split_type: segVal(qs('#esplit'))
   };
