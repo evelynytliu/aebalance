@@ -362,12 +362,23 @@ function toast(msg) {
   clearTimeout(t._h);
   t._h = setTimeout(function () { t.classList.remove('show'); }, 2200);
 }
+function wait(ms) { return new Promise(function (res) { setTimeout(res, ms); }); }
+// Edge Function 冷啟動偶發 5xx／行動網路瞬斷：自動重試最多 3 次
+function fetchRetry(url, opts, tries) {
+  return fetch(url, opts).then(function (r) {
+    if (r.status >= 500 && tries > 1) return wait(700).then(function () { return fetchRetry(url, opts, tries - 1); });
+    return r;
+  }).catch(function (e) {
+    if (tries > 1) return wait(700).then(function () { return fetchRetry(url, opts, tries - 1); });
+    throw e;
+  });
+}
 function api(method, path, body) {
-  return fetch(BASE + path, {
+  return fetchRetry(BASE + path, {
     method: method,
     headers: { 'content-type': 'application/json', 'x-aeb-pin': PIN },
     body: body ? JSON.stringify(body) : undefined
-  }).then(function (r) {
+  }, 3).then(function (r) {
     if (r.status === 401) { showLogin(); throw new Error('請重新輸入 PIN'); }
     return r.json().then(function (j) {
       if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
@@ -408,18 +419,24 @@ function showLogin() {
 function doLogin() {
   var pin = qs('#pin').value.trim();
   if (!pin) return;
+  var btn = qs('#loginbtn');
   qs('#loginerr').textContent = '';
-  fetch(BASE + '/api/login', {
+  btn.disabled = true; btn.textContent = '登入中…';
+  fetchRetry(BASE + '/api/login', {
     method: 'POST', headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ pin: pin })
-  }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+  }, 3).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, status: r.status, j: j }; }); })
     .then(function (res) {
-      if (!res.ok) { qs('#loginerr').textContent = res.j.error || 'PIN 錯誤'; return; }
+      if (!res.ok) {
+        qs('#loginerr').textContent = res.status >= 500 ? '伺服器暫時忙碌，再按一次就好' : (res.j.error || 'PIN 錯誤');
+        return;
+      }
       PIN = pin;
       localStorage.setItem('aeb_pin', pin);
       qs('#login').hidden = true;
       load();
-    }).catch(function () { qs('#loginerr').textContent = '連線失敗，再試一次'; });
+    }).catch(function () { qs('#loginerr').textContent = '連線失敗，請檢查網路後再試'; })
+    .finally(function () { btn.disabled = false; btn.textContent = '進入'; });
 }
 qs('#loginbtn').addEventListener('click', doLogin);
 qs('#pin').addEventListener('keydown', function (e) { if (e.key === 'Enter') doLogin(); });
