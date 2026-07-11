@@ -581,7 +581,14 @@ qs('#pendingwrap').addEventListener('click', function (ev) {
     return;
   }
   var act = ev.target.closest('[data-act]');
-  if (!act) return;
+  if (!act) {
+    var pc = ev.target.closest('.pcard');
+    if (pc) {
+      var pe = state.data.expenses.find(function (x) { return x.id === pc.dataset.id; });
+      if (pe) openEdit(pe);
+    }
+    return;
+  }
   if (act.dataset.act === 'pendtoggle') {
     state.pendAll = !state.pendAll;
     renderPending();
