@@ -125,8 +125,9 @@ Deno.serve(async (req: Request) => {
       net = Math.round(net * 100) / 100;
       if (Math.abs(net) < 0.01) return json({ error: "目前沒有未結清的款項" }, 400);
       const payer = net > 0 ? "ting" : "lin";
+      const receiver = payer === "ting" ? "lin" : "ting";
       const { data: s, error: e1 } = await db.from("aeb_settlements")
-        .insert({ payer, amount: Math.abs(net), note: body.note ?? null }).select().single();
+        .insert({ payer, receiver, amount: Math.abs(net), note: body.note ?? null }).select().single();
       if (e1) throw e1;
       const ids = (rows ?? []).map((r) => r.id);
       const { error: e2 } = await db.from("aeb_expenses")
@@ -140,16 +141,18 @@ Deno.serve(async (req: Request) => {
       const body = await req.json().catch(() => ({}));
       const debtor = String(body.debtor ?? "");
       if (!debtor || debtor === "sister") return json({ error: "invalid debtor" }, 400);
+      // creditor = 這些帳當初是誰付的（蕾可能欠婷也可能欠琳，分開結清）
+      const creditor = body.creditor === "lin" ? "lin" : "ting";
       const { data: rows, error } = await db.from("aeb_expenses")
         .select("id, amount, paid_by, split_type, owed_override")
-        .is("settlement_id", null).eq("status", "confirmed").eq("debtor", debtor);
+        .is("settlement_id", null).eq("status", "confirmed").eq("debtor", debtor).eq("paid_by", creditor);
       if (error) throw error;
       let sum = 0;
       for (const r of rows ?? []) sum += owedOf(r);
       sum = Math.round(sum * 100) / 100;
       if (sum < 0.01) return json({ error: "沒有 " + debtor + " 的未收款項" }, 400);
       const { data: s, error: e1 } = await db.from("aeb_settlements")
-        .insert({ payer: debtor, amount: sum, note: body.note ?? (debtor + " 請款結清") }).select().single();
+        .insert({ payer: debtor, receiver: creditor, amount: sum, note: body.note ?? (debtor + " 請款結清") }).select().single();
       if (e1) throw e1;
       const { error: e2 } = await db.from("aeb_expenses")
         .update({ settlement_id: s.id }).in("id", (rows ?? []).map((r) => r.id));
