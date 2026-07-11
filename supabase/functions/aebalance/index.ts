@@ -39,7 +39,7 @@ function owedOf(e: { amount: string | number; split_type: string; owed_override:
   return e.split_type === "half" ? amt / 2 : amt;
 }
 
-const EXPENSE_FIELDS = ["date", "title", "amount", "paid_by", "split_type", "owed_override", "status", "source", "gmail_message_id", "note"];
+const EXPENSE_FIELDS = ["date", "title", "amount", "paid_by", "split_type", "owed_override", "status", "source", "gmail_message_id", "note", "debtor"];
 const CONFIG_KEYS = ["pin", "name_lin", "name_ting", "uber_default_payer", "uber_default_split"];
 
 function pickExpense(raw: Record<string, unknown>): Record<string, unknown> {
@@ -88,9 +88,9 @@ Deno.serve(async (req: Request) => {
           return json({ error: "缺少必要欄位（品項/金額/付款人）" }, 400);
         }
       }
-      // gmail_message_id 有唯一索引：自動匯入重複寄送時直接略過
+      // (gmail_message_id, debtor) 唯一：自動匯入重複寄送時直接略過
       const { data, error } = await db.from("aeb_expenses")
-        .upsert(items, { onConflict: "gmail_message_id", ignoreDuplicates: true })
+        .upsert(items, { onConflict: "gmail_message_id,debtor", ignoreDuplicates: true })
         .select();
       if (error) throw error;
       return json({ inserted: data?.length ?? 0, items: data });
@@ -118,7 +118,7 @@ Deno.serve(async (req: Request) => {
       const body = await req.json().catch(() => ({}));
       const { data: rows, error } = await db.from("aeb_expenses")
         .select("id, amount, paid_by, split_type, owed_override")
-        .is("settlement_id", null).eq("status", "confirmed");
+        .is("settlement_id", null).eq("status", "confirmed").eq("debtor", "sister");
       if (error) throw error;
       let net = 0; // 正數 = 婷應給琳
       for (const r of rows ?? []) net += (r.paid_by === "lin" ? 1 : -1) * owedOf(r);
@@ -133,6 +133,28 @@ Deno.serve(async (req: Request) => {
         .update({ settlement_id: s.id }).in("id", ids);
       if (e2) throw e2;
       return json({ settlement: s, count: ids.length });
+    }
+
+    // 第三方（如蕾）請款結清：把該欠款人所有未結清帳標記為已收
+    if (req.method === "POST" && path === "/api/settle-third") {
+      const body = await req.json().catch(() => ({}));
+      const debtor = String(body.debtor ?? "");
+      if (!debtor || debtor === "sister") return json({ error: "invalid debtor" }, 400);
+      const { data: rows, error } = await db.from("aeb_expenses")
+        .select("id, amount, paid_by, split_type, owed_override")
+        .is("settlement_id", null).eq("status", "confirmed").eq("debtor", debtor);
+      if (error) throw error;
+      let sum = 0;
+      for (const r of rows ?? []) sum += owedOf(r);
+      sum = Math.round(sum * 100) / 100;
+      if (sum < 0.01) return json({ error: "沒有 " + debtor + " 的未收款項" }, 400);
+      const { data: s, error: e1 } = await db.from("aeb_settlements")
+        .insert({ payer: debtor, amount: sum, note: body.note ?? (debtor + " 請款結清") }).select().single();
+      if (e1) throw e1;
+      const { error: e2 } = await db.from("aeb_expenses")
+        .update({ settlement_id: s.id }).in("id", (rows ?? []).map((r) => r.id));
+      if (e2) throw e2;
+      return json({ settlement: s, count: (rows ?? []).length });
     }
 
     // 刪除結算 = 復原：該次結算的帳目自動變回未結清 (FK on delete set null)
