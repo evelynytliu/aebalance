@@ -137,8 +137,18 @@ header h1 span{color:var(--accent)}
 .srow .sub{font-size:12px;color:var(--muted)}
 .srow .amt{font-weight:900}
 .srow .undo{color:var(--muted);font-size:12px;padding:6px;text-decoration:underline}
-.tpbtn{background:var(--accent);color:#fff;border-radius:10px;padding:6px 14px;font-weight:700;font-size:13px;margin-left:8px}
-#tpcard{order:6}
+.tpbtn{background:var(--accent);color:#fff;border-radius:10px;padding:6px 14px;font-weight:700;font-size:13px}
+.tphead{display:flex;align-items:center;gap:8px;padding:8px 2px;cursor:pointer;-webkit-user-select:none;user-select:none}
+.tphead:active{background:var(--line);border-radius:10px}
+.tphead .chev{width:16px;font-size:11px;color:var(--muted)}
+.tphead .mid{flex:1;min-width:0}
+.tphead .n{color:var(--muted);font-size:12px;font-weight:400}
+.tphead .amt{font-weight:900}
+.tpitem{display:flex;gap:8px;padding:7px 2px 7px 24px;border-top:1px solid var(--line);font-size:13px;align-items:center;cursor:pointer}
+.tpitem .d{color:var(--muted);font-size:11px;flex-shrink:0}
+.tpitem .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tpbtn.wide{width:100%;margin:10px 0 2px;padding:9px}
+
 /* ---------- dialogs ---------- */
 dialog{
   border:none;border-radius:28px;background:var(--card);color:var(--ink);
@@ -185,13 +195,14 @@ textarea{min-height:130px;font-size:13px}
 .cols{display:flex;flex-direction:column}
 .colL,.colR{display:contents}
 #hero{order:1}
-#qcard{order:2}
-#pendingwrap{order:3}
-.bar{order:4}
-.fbar{order:4}
-#list{order:5}
-#settlecard{order:6}
-#foot{order:7}
+#tpcard{order:2}
+#qcard{order:3}
+#pendingwrap{order:4}
+.bar{order:5}
+.fbar{order:5}
+#list{order:6}
+#settlecard{order:7}
+#foot{order:8}
 @media (min-width:960px){
   .wrap{max-width:1200px}
   .cols{display:grid;grid-template-columns:410px minmax(0,1fr);gap:0 24px;align-items:start}
@@ -247,6 +258,11 @@ dialog .seg{flex-wrap:wrap}
   <div class="colL">
   <div class="hero" id="hero"></div>
 
+  <div class="card" id="tpcard" hidden>
+    <h2>💰 其他人請款（不算琳婷結餘）</h2>
+    <div id="tplist"></div>
+  </div>
+
   <div class="card" id="qcard">
     <h2>快速記一筆</h2>
     <form id="qform">
@@ -274,11 +290,6 @@ dialog .seg{flex-wrap:wrap}
       </div>
     </form>
     <div class="hint">平分＝各付一半 ・ 代墊＝整筆算對方的 ・ 金額可輸入負數代表退款</div>
-  </div>
-
-  <div class="card" id="tpcard" hidden>
-    <h2>💰 其他人請款（不算琳婷結餘）</h2>
-    <div id="tplist"></div>
   </div>
 
   <div class="card" id="settlecard" hidden>
@@ -425,7 +436,7 @@ dialog .seg{flex-wrap:wrap}
 'use strict';
 var BASE = 'https://vrkrocxpdmtfmhzotfnk.supabase.co/functions/v1/aebalance';
 var PIN = localStorage.getItem('aeb_pin') || '';
-var state = { data: null, tab: 'open', q: '', editing: null, openMonths: null, pendAll: false, fPayer: '', fType: '', fSrc: '' };
+var state = { data: null, tab: 'open', q: '', editing: null, openMonths: null, pendAll: false, fPayer: '', fType: '', fSrc: '', tpOpen: {} };
 var qs = function (s) { return document.querySelector(s); };
 var qsa = function (s) { return Array.prototype.slice.call(document.querySelectorAll(s)); };
 
@@ -805,23 +816,44 @@ function renderTP() {
     if (d === 'sister') return;
     if (e.settlement_id != null || e.status !== 'confirmed') return;
     var k = d + '|' + e.paid_by;
-    groups[k] = groups[k] || { d: d, c: e.paid_by, sum: 0, n: 0 };
+    groups[k] = groups[k] || { d: d, c: e.paid_by, sum: 0, items: [] };
     groups[k].sum += owedOf(e);
-    groups[k].n++;
+    groups[k].items.push(e);
   });
   var keys = Object.keys(groups);
   qs('#tpcard').hidden = !keys.length;
   qs('#tplist').innerHTML = keys.map(function (k) {
     var g = groups[k];
-    return '<div class="srow"><div class="ic">🧾</div>' +
-      '<div class="mid"><div class="t">' + esc(g.d) + ' 應付 ' + esc(pname(g.c)) + '</div><div class="sub">' + g.n + ' 筆未收（清單可搜「' + esc(g.d) + '」查明細）</div></div>' +
-      '<div class="amt num">' + money(Math.round(g.sum * 100) / 100) + '</div>' +
-      '<button class="tpbtn" data-d="' + esc(g.d) + '" data-c="' + g.c + '">已收款 ✓</button></div>';
+    var open = state.tpOpen[k];
+    var html = '<div class="tphead" data-k="' + esc(k) + '"><span class="chev">' + (open ? '▼' : '►') + '</span>' +
+      '<div class="mid"><b>' + esc(g.d) + ' 應付 ' + esc(pname(g.c)) + '</b> <span class="n">・ ' + g.items.length + ' 筆</span></div>' +
+      '<div class="amt num">' + money(Math.round(g.sum * 100) / 100) + '</div></div>';
+    if (open) {
+      html += g.items.map(function (e) {
+        return '<div class="tpitem" data-id="' + e.id + '"><span class="d">' + esc(e.date.slice(5)) + '</span>' +
+          '<span class="t">' + esc(e.title) + '</span><span class="num">' + money(owedOf(e)) + '</span></div>';
+      }).join('');
+      html += '<button class="tpbtn wide" data-d="' + esc(g.d) + '" data-c="' + g.c + '">' + esc(g.d) + ' 已付清給 ' + esc(pname(g.c)) + ' ✓</button>';
+    }
+    return html;
   }).join('');
 }
 qs('#tplist').addEventListener('click', function (ev) {
   var b = ev.target.closest('.tpbtn');
-  if (!b) return;
+  if (!b) {
+    var it = ev.target.closest('.tpitem');
+    if (it) {
+      var e = state.data.expenses.find(function (x) { return x.id === it.dataset.id; });
+      if (e) openEdit(e);
+      return;
+    }
+    var h = ev.target.closest('.tphead');
+    if (h) {
+      state.tpOpen[h.dataset.k] = !state.tpOpen[h.dataset.k];
+      renderTP();
+    }
+    return;
+  }
   var d = b.dataset.d, c = b.dataset.c;
   if (!confirm('確認 ' + d + ' 已經把錢付給' + pname(c) + '了？這部分未收帳目會標記為已結清（可復原）。')) return;
   api('POST', '/api/settle-third', { debtor: d, creditor: c }).then(function (r) {
