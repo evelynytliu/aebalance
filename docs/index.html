@@ -441,7 +441,22 @@ dialog .seg{flex-wrap:wrap}
 <script>
 'use strict';
 var BASE = 'https://vrkrocxpdmtfmhzotfnk.supabase.co/functions/v1/aebalance';
-var PIN = localStorage.getItem('aeb_pin') || '';
+// PIN 記在 localStorage＋cookie 雙保險（Safari 偶爾會清 localStorage）
+function savePin(pin) {
+  PIN = pin;
+  try { localStorage.setItem('aeb_pin', pin); } catch (e) {}
+  document.cookie = 'aeb_pin=' + encodeURIComponent(pin) + ';max-age=34560000;path=/;SameSite=Lax';
+}
+function loadPin() {
+  var v = null;
+  try { v = localStorage.getItem('aeb_pin'); } catch (e) {}
+  if (!v) {
+    var m = document.cookie.match(/(?:^|; )aeb_pin=([^;]+)/);
+    if (m) { v = decodeURIComponent(m[1]); try { localStorage.setItem('aeb_pin', v); } catch (e) {} }
+  }
+  return v || '';
+}
+var PIN = loadPin();
 var state = { data: null, tab: 'open', q: '', editing: null, openMonths: null, pendAll: false, fPayer: '', fType: '', fSrc: '', tpOpen: {} };
 var qs = function (s) { return document.querySelector(s); };
 var qsa = function (s) { return Array.prototype.slice.call(document.querySelectorAll(s)); };
@@ -546,8 +561,7 @@ function doLogin() {
         qs('#loginerr').textContent = res.status >= 500 ? '伺服器暫時忙碌，再按一次就好' : (res.j.error || 'PIN 錯誤');
         return;
       }
-      PIN = pin;
-      localStorage.setItem('aeb_pin', pin);
+      savePin(pin);
       qs('#login').hidden = true;
       load();
     }).catch(function () { qs('#loginerr').textContent = '連線失敗，請檢查網路後再試'; })
@@ -1111,7 +1125,7 @@ qs('#setform').addEventListener('submit', function (ev) {
   var newpin = qs('#cpin').value.trim();
   if (newpin) body.pin = newpin;
   api('POST', '/api/config', body).then(function () {
-    if (newpin) { PIN = newpin; localStorage.setItem('aeb_pin', newpin); }
+    if (newpin) { savePin(newpin); }
     setdlg.close();
     toast('設定已儲存 ✓');
     return load(true);
