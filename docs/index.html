@@ -256,6 +256,7 @@ dialog .seg{flex-wrap:wrap}
 <div class="wrap">
   <header>
     <h1>琳婷<span>帳本</span></h1>
+    <button class="iconbtn" id="refreshbtn" title="重新整理資料">🔄</button>
     <button class="iconbtn" id="pastebtn" title="貼上匯入">📋</button>
     <button class="iconbtn" id="setbtn" title="設定">⚙️</button>
   </header>
@@ -478,6 +479,14 @@ function pname(p) {
   var c = state.data ? state.data.config : {};
   return p === 'lin' ? (c.name_lin || '琳') : (c.name_ting || '婷');
 }
+function syncInfo() {
+  var c = state.data ? state.data.config : {};
+  var m = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/.exec(c.last_sync_at || '');
+  if (!m) return '';
+  var d = new Date(Date.UTC(+m[1], m[2] - 1, +m[3], +m[4], +m[5]));
+  return ' <span title="' + esc(c.last_sync_info || '') + '">・🤖 ' + (d.getMonth() + 1) + '/' + d.getDate() + ' ' +
+    ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2) + '</span>';
+}
 function toast(msg) {
   var t = qs('#toast');
   t.textContent = msg;
@@ -631,7 +640,7 @@ function renderHero() {
   if (Math.abs(net) < 0.01) {
     h.className = 'hero zero';
     h.innerHTML = '<div class="lbl">目前結餘</div><div class="amt">🎉 兩不相欠</div>' +
-      '<div class="sub">' + n + ' 筆未結清紀錄</div>';
+      '<div class="sub">' + n + ' 筆未結清紀錄' + syncInfo() + '</div>';
     return;
   }
   var debtor = net > 0 ? 'ting' : 'lin';
@@ -641,7 +650,7 @@ function renderHero() {
     '<div class="lbl">目前結餘</div>' +
     '<div class="who">' + esc(pname(debtor)) + ' <span class="arrow">─➤</span> ' + esc(pname(creditor)) + '</div>' +
     '<div class="amt num">' + money(Math.abs(net)) + '</div>' +
-    '<div class="sub">' + n + ' 筆未結清 ・ ' + esc(pname(debtor)) + ' 應給 ' + esc(pname(creditor)) + '</div>' +
+    '<div class="sub">' + n + ' 筆未結清 ・ ' + esc(pname(debtor)) + ' 應給 ' + esc(pname(creditor)) + syncInfo() + '</div>' +
     '<div class="actions"><button class="settlebtn" id="settlebtn">結算付款 ✓</button></div>';
   qs('#settlebtn').addEventListener('click', openSettle);
 }
@@ -1151,6 +1160,14 @@ qs('#search').addEventListener('input', function () {
     this.classList.toggle('on', !!this.value);
     renderList();
   });
+});
+
+qs('#refreshbtn').addEventListener('click', function () {
+  var b = this;
+  if (b.classList.contains('spin')) return;
+  b.classList.add('spin');
+  var done = function () { b.classList.remove('spin'); };
+  load(true).then(function () { toast('資料已更新 ✓'); }).then(done, done);
 });
 
 /* ---------- boot ---------- */
