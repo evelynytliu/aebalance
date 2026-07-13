@@ -64,6 +64,9 @@ header h1 span{color:var(--accent)}
 }
 .hero .settlebtn:active{transform:scale(.97)}
 .hero.zero .amt{font-size:30px;padding:8px 0}
+#loginalert:empty{display:none}
+.loginalert{background:var(--warn-soft);color:var(--warn);border:1.5px solid var(--warn);border-radius:16px;padding:12px 14px;margin-top:12px;font-size:13px;font-weight:600;line-height:1.5;display:flex;gap:9px;align-items:flex-start}
+.loginalert .ico{font-size:17px;line-height:1.3;flex-shrink:0}
 /* ---------- cards ---------- */
 .card{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:16px;margin-top:14px}
 .card h2{font-size:13px;color:var(--muted);font-weight:700;letter-spacing:2px;margin-bottom:10px}
@@ -264,6 +267,7 @@ dialog .seg{flex-wrap:wrap}
   <div class="cols">
   <div class="colL">
   <div class="hero" id="hero"></div>
+  <div id="loginalert"></div>
 
   <div class="card" id="tpcard" hidden>
     <h2>💰 其他人請款（不算琳婷結餘）</h2>
@@ -613,6 +617,7 @@ function render() {
   var d = state.data;
   if (!d) return;
   renderHero();
+  renderLoginAlert();
   renderPending();
   renderList();
   renderSettles();
@@ -633,6 +638,14 @@ function render() {
   fp.options[2].textContent = pname('ting') + '付';
 }
 
+function renderLoginAlert() {
+  var c = state.data ? state.data.config : {};
+  var el = qs('#loginalert');
+  var msg = (c && c.login_alert) ? String(c.login_alert).trim() : '';
+  el.innerHTML = msg
+    ? '<div class="loginalert"><span class="ico">⚠️</span><span>' + esc(msg) + '</span></div>'
+    : '';
+}
 function renderHero() {
   var net = netBalance();
   var n = unsettledConfirmed().length;
